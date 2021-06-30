@@ -11,7 +11,6 @@ import javax.servlet.annotation.*;
 import java.io.IOException;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import sql.WordCountDao;
@@ -22,7 +21,7 @@ import sql.WordCountDao;
 @WebServlet(name = "TextAnalysisServlet", urlPatterns = "/textbody/*")
 public class TextAnalysisServlet extends HttpServlet {
 
-  private static String TABLE_NAME = "wc1";
+  private static String TABLE_NAME = "wc";
   private static final Logger logger = LogManager.getLogger(TextAnalysisServlet.class.getName());
   private final static String QUEUE_NAME = "wcQueue";
   private ObjectPool<Channel> pool;
@@ -56,18 +55,13 @@ public class TextAnalysisServlet extends HttpServlet {
   @Override
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
-    response.setContentType("text/html");
+    response.setContentType("text/plain");
     PrintWriter out = response.getWriter();
     String urlPath = request.getPathInfo();
     String[] urlArr = urlPath.split("/");
     if (!isGetUrlValid(urlArr)) {
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
       out.write("Parameters are not valid.");
-//      out.write(String.valueOf(urlArr.length));
-//      out.write("0: " + urlArr[0]);
-//      out.write("1: " + urlArr[1]);
-//      out.write("2: " +urlArr[2]);
-//      out.write("3: " +urlArr[3]);
     } else {
       Integer wordCt = wcd.getWordCount(TABLE_NAME, urlArr[2]);
 //      out.write(String.valueOf(wordCt));
@@ -79,12 +73,6 @@ public class TextAnalysisServlet extends HttpServlet {
         out.write(urlArr[2] + " is not found in the database");
       }
     }
-
-    response.setStatus(HttpServletResponse.SC_OK);
-    JsonObject jsonResp = new JsonObject();
-    jsonResp.addProperty("message", "[GET] received");
-    out.write(String.valueOf(jsonResp));
-    out.write("\n" + urlPath);
     out.flush();
   }
 
@@ -122,7 +110,7 @@ public class TextAnalysisServlet extends HttpServlet {
       JsonObject jsonMap = LineProcessing.processLine(requestBody);
       sendMessageToQueue(jsonMap);
       if (sendMessageToQueue(jsonMap)) {
-        out.write(jsonMap.size());
+        out.write("Unique words count: " + jsonMap.size());
       } else {
         logger.info("Failed to send message to RabbitMQ");
       }
